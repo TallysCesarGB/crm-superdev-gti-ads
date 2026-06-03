@@ -64,7 +64,7 @@
 </div>
 
 <!-- Perfis rápidos -->
-<div class="grid-4" style="margin-bottom:16px;">
+<div class="grid-3" style="margin-bottom:16px;">
   {% for perfil, label, cor, qtd in perfis_list %}
   <div class="card" style="padding:14px 16px;border-color:{{ cor }}22;">
     <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;font-weight:600;margin-bottom:6px;">{{ label }}</div>
@@ -157,55 +157,56 @@
   </div>
 </div>
 
-<!-- Categorias Rentáveis (card principal) -->
-<div class="card" style="margin-bottom:16px;">
-  <div class="card-title">💎 Categorias Mais Rentáveis — Receita Total por Categoria</div>
-  <div style="overflow-x:auto;">
-    <table class="dg" id="dgCat">
-      <thead>
-        <tr>
-          <th style="width:36px;">#</th>
-          <th>Categoria</th>
-          <th class="sortable" data-col="2">Receita Total<span class="sort-icon"></span></th>
-          <th class="sortable" data-col="3">Ticket Médio<span class="sort-icon"></span></th>
-          <th class="sortable" data-col="4">Clientes<span class="sort-icon"></span></th>
-          <th>Participação</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for cat in categorias_rentaveis %}
-        <tr>
-          <td style="color:var(--text3);font-size:0.75rem;font-family:var(--mono);">{{ forloop.counter }}</td>
-          <td><strong style="font-size:0.83rem;">{{ cat.categoria_mais_comprada }}</strong></td>
-          <td data-val="{{ cat.gasto_total_cat|floatformat:2 }}" style="font-family:var(--mono);font-weight:700;color:#4ade80;">
-            R$ {{ cat.gasto_total_cat|floatformat:2 }}
-          </td>
-          <td data-val="{{ cat.ticket_medio_cat|floatformat:2 }}" style="font-family:var(--mono);color:var(--accent-light);">
-            R$ {{ cat.ticket_medio_cat|floatformat:2 }}
-          </td>
-          <td data-val="{{ cat.total_clientes }}" style="font-family:var(--mono);">{{ cat.total_clientes }}</td>
-          <td style="min-width:140px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
-                <div style="height:100%;background:var(--accent);border-radius:3px;width:{{ cat.pct|floatformat:0 }}%;"></div>
+<!-- Categorias Rentáveis + Gráfico lado a lado -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+  <div class="card">
+    <div class="card-title">💎 Categorias Mais Rentáveis</div>
+    <div style="overflow-x:auto;">
+      <table class="dg" id="dgCat">
+        <thead>
+          <tr>
+            <th style="width:28px;">#</th>
+            <th>Categoria</th>
+            <th class="sortable" data-col="2">Receita<span class="sort-icon"></span></th>
+            <th class="sortable" data-col="3">Ticket<span class="sort-icon"></span></th>
+            <th class="sortable" data-col="4">Clientes<span class="sort-icon"></span></th>
+            <th>Part.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cat in categorias_rentaveis %}
+          <tr>
+            <td style="color:var(--text3);font-size:0.75rem;font-family:var(--mono);">{{ forloop.counter }}</td>
+            <td><strong style="font-size:0.82rem;">{{ cat.categoria_mais_comprada }}</strong></td>
+            <td data-val="{{ cat.gasto_total_cat|floatformat:2 }}" style="font-family:var(--mono);font-weight:700;color:#4ade80;white-space:nowrap;">
+              R$ {{ cat.gasto_total_cat|floatformat:0 }}
+            </td>
+            <td data-val="{{ cat.ticket_medio_cat|floatformat:2 }}" style="font-family:var(--mono);color:var(--accent-light);white-space:nowrap;">
+              R$ {{ cat.ticket_medio_cat|floatformat:0 }}
+            </td>
+            <td data-val="{{ cat.total_clientes }}" style="font-family:var(--mono);">{{ cat.total_clientes }}</td>
+            <td style="min-width:80px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="flex:1;height:4px;background:var(--border);border-radius:3px;overflow:hidden;">
+                  <div style="height:100%;background:var(--accent);border-radius:3px;width:{{ cat.pct|floatformat:0 }}%;"></div>
+                </div>
+                <span style="font-size:0.7rem;color:var(--text3);font-family:var(--mono);width:30px;text-align:right;">{{ cat.pct|floatformat:0 }}%</span>
               </div>
-              <span style="font-size:0.72rem;color:var(--text3);font-family:var(--mono);width:32px;text-align:right;">{{ cat.pct|floatformat:1 }}%</span>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+
+  <div class="card">
+    <div class="card-title">📈 Receita por Categoria (R$)</div>
+    <canvas id="chartCat"></canvas>
+  </div>
+
 </div>
-
-<!-- Gráfico de barras categorias -->
-<div class="card" style="margin-bottom:16px;">
-  <div class="card-title">📈 Receita por Categoria (R$)</div>
-  <canvas id="chartCat" height="160"></canvas>
-</div>
-
-
 
 <!-- Notificações recentes -->
 <div class="card">
@@ -307,9 +308,30 @@ new Chart(document.getElementById('chartPerfis'), {
 });
 
 new Chart(document.getElementById('chartCat'), {
-  type:'bar',
-  data:{ labels:catL, datasets:[{ data:catG, backgroundColor:'#6366f1', borderRadius:4, borderWidth:0, hoverBackgroundColor:'#818cf8' }] },
-  options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#64748b',callback:v=>'R$'+v.toLocaleString('pt-BR'),font:{family:'Inter',size:11}},grid:{color:'rgba(255,255,255,0.04)'}}, y:{ticks:{color:'#64748b',font:{family:'Inter',size:11}},grid:{display:false}} } }
+  type: 'bar',
+  data: {
+    labels: catL,
+    datasets: [{
+      data: catG,
+      backgroundColor: '#6366f1',
+      borderRadius: 5,
+      borderWidth: 0,
+      hoverBackgroundColor: '#818cf8'
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: {
+        ticks: { color: '#64748b', font: { family: 'Inter', size: 10 }, maxRotation: 35, minRotation: 35 },
+        grid: { display: false }
+      },
+      y: {
+        ticks: { color: '#64748b', font: { family: 'Inter', size: 10 }, callback: v => 'R$' + v.toLocaleString('pt-BR') },
+        grid: { color: 'rgba(255,255,255,0.04)' }
+      }
+    }
+  }
 });
 
 initDataGrid('dgTop20');

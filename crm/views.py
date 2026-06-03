@@ -87,6 +87,7 @@ def dashboard(request):
         ('vegetariano_incompleto','Cross-Sell',  '#f59e0b', veg),
         ('habitos_previsiveis',   'Perfil Bebê', '#22c55e', beb),
         ('ativo',                 'Ativos',      '#3b82f6', ati),
+        ('novo',                  'Novos',       '#6366f1', nov),
     ]
 
     perfis_sim = [
