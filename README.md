@@ -183,16 +183,6 @@ Content-Type: application/json
 
 ---
 
-## 👥 Equipe
-
-| Nome | RA |
-|------|----|
-|  |  |
-|  |  |
-|  |  |
-
----
-
 ## 📄 Licença
 
 Projeto acadêmico desenvolvido para fins educacionais — **ADS · Gestão de TI**
