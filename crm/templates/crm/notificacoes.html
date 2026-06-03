@@ -1,0 +1,88 @@
+{% extends "crm/base.html" %}
+{% block title %}— Notificações{% endblock %}
+{% block nav_notif %}active{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="page-title">Notificações 🔔</div>
+    <div class="page-sub">{{ notificacoes.count }} notificação(ões) no sistema</div>
+  </div>
+  <button class="btn btn-danger btn-sm" onclick="limpar()">🗑 Limpar Todas</button>
+</div>
+
+{% if notificacoes %}
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Perfil</th>
+        <th>Tipo</th>
+        <th>Mensagem</th>
+        <th>Oferta / Desconto</th>
+        <th>Nova Categoria</th>
+        <th>Status</th>
+        <th>Data</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for n in notificacoes %}
+    <tr>
+      <td>
+        <a href="/clientes/{{ n.cliente.pk }}/" style="text-decoration:none;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="avatar {% if n.cliente.status == 'vermelho' %}avatar-red{% elif n.cliente.status == 'amarelo' %}avatar-yellow{% else %}avatar-green{% endif %}" style="width:30px;height:30px;font-size:0.78rem;">
+              {{ n.cliente.nome|slice:":1" }}
+            </div>
+            <span style="font-weight:600;font-size:0.85rem;color:var(--text);">{{ n.cliente.nome }}</span>
+          </div>
+        </a>
+      </td>
+      <td>
+        {% if n.cliente.perfil == 'ex_fiel' %}<span class="badge badge-red" style="font-size:0.72rem;">Ex-Fiel</span>
+        {% elif n.cliente.perfil == 'vegetariano_incompleto' %}<span class="badge badge-yellow" style="font-size:0.72rem;">Cross-Sell</span>
+        {% elif n.cliente.perfil == 'habitos_previsiveis' %}<span class="badge badge-green" style="font-size:0.72rem;">Bebê</span>
+        {% elif n.cliente.perfil == 'ativo' %}<span class="badge badge-blue" style="font-size:0.72rem;">Ativo</span>
+        {% else %}<span class="badge badge-purple" style="font-size:0.72rem;">Novo</span>{% endif %}
+      </td>
+      <td><span class="chip">{{ n.get_tipo_display }}</span></td>
+      <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.82rem;color:var(--muted);" title="{{ n.mensagem }}">{{ n.mensagem }}</td>
+      <td>
+        <div style="font-size:0.8rem;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">{{ n.oferta }}</div>
+        <div style="font-size:0.75rem;font-weight:700;color:#ffb829;">-{{ n.desconto }}% OFF</div>
+      </td>
+      <td><span class="chip" style="color:var(--accent2);">{{ n.categoria_alvo }}</span></td>
+      <td>
+        {% if n.status == 'enviada' %}<span class="badge badge-green">✓ Enviada</span>
+        {% elif n.status == 'lida' %}<span class="badge badge-blue">👁 Lida</span>
+        {% else %}<span class="badge badge-yellow">⏳ Pendente</span>{% endif %}
+      </td>
+      <td style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">{{ n.criada_em|date:"d/m H:i" }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px;">
+  <div style="font-size:3rem;margin-bottom:12px;">🔔</div>
+  <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">Nenhuma notificação ainda</div>
+  <div style="color:var(--muted);margin-bottom:20px;">Use o Simulador de Gatilhos no Dashboard para disparar campanhas personalizadas.</div>
+  <a href="/" class="btn btn-primary">Ir ao Dashboard</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function limpar() {
+  if (!confirm('Limpar todas as notificações?')) return;
+  await fetch('/api/limpar-notificacoes/', { method:'POST', headers:{'X-CSRFToken':getCsrf()} });
+  showToast('Limpeza', 'Notificações removidas.','info');
+  setTimeout(() => location.reload(), 1200);
+}
+</script>
+{% endblock %}

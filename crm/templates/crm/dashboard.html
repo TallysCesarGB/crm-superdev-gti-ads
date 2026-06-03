@@ -1,0 +1,389 @@
+{% extends "crm/base.html" %}
+{% block title %}— Dashboard{% endblock %}
+{% block nav_dash %}active{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="page-title">Dashboard</div>
+    <div class="page-sub">Visão geral · {{ total_clientes }} clientes cadastrados</div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-danger btn-sm" onclick="limparNotificacoes()">🗑 Limpar Notifs</button>
+    <button class="btn btn-primary" onclick="abrirSimulador()">⚡ Simulador de Gatilhos</button>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="grid-4" style="margin-bottom:16px;">
+  <div class="card kpi">
+    <span class="kpi-icon">👥</span>
+    <div class="kpi-label">Total de Clientes</div>
+    <div class="kpi-value">{{ total_clientes }}</div>
+    <div class="kpi-sub">Base ativa no sistema</div>
+  </div>
+  <div class="card kpi" style="border-color:rgba(239,68,68,.25);">
+    <span class="kpi-icon">🔴</span>
+    <div class="kpi-label">Alto Risco</div>
+    <div class="kpi-value" style="color:#f87171;">{{ vermelhos }}</div>
+    <div class="kpi-sub">Risco de churn</div>
+  </div>
+  <div class="card kpi" style="border-color:rgba(245,158,11,.25);">
+    <span class="kpi-icon">🟡</span>
+    <div class="kpi-label">Atenção</div>
+    <div class="kpi-value" style="color:#fbbf24;">{{ amarelos }}</div>
+    <div class="kpi-sub">Cross-sell / irregular</div>
+  </div>
+  <div class="card kpi" style="border-color:rgba(34,197,94,.25);">
+    <span class="kpi-icon">🟢</span>
+    <div class="kpi-label">Saudável</div>
+    <div class="kpi-value" style="color:#4ade80;">{{ verdes }}</div>
+    <div class="kpi-sub">Clientes engajados</div>
+  </div>
+</div>
+
+<div class="grid-3" style="margin-bottom:16px;">
+  <div class="card kpi">
+    <span class="kpi-icon">💰</span>
+    <div class="kpi-label">Ticket Médio</div>
+    <div class="kpi-value" style="font-size:1.4rem;">R$ {{ ticket_medio|floatformat:2 }}</div>
+    <div class="kpi-sub">Média mensal por cliente</div>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-icon">📦</span>
+    <div class="kpi-label">Receita Total (mês)</div>
+    <div class="kpi-value" style="font-size:1.4rem;">R$ {{ gasto_total|floatformat:0 }}</div>
+    <div class="kpi-sub">Soma de todos os clientes</div>
+  </div>
+  <div class="card kpi">
+    <span class="kpi-icon">📅</span>
+    <div class="kpi-label">Média Dias Ausente</div>
+    <div class="kpi-value" style="font-size:1.4rem;">{{ media_dias|floatformat:0 }}d</div>
+    <div class="kpi-sub">Dias médios sem compra</div>
+  </div>
+</div>
+
+<!-- Perfis rápidos -->
+<div class="grid-4" style="margin-bottom:16px;">
+  {% for perfil, label, cor, qtd in perfis_list %}
+  <div class="card" style="padding:14px 16px;border-color:{{ cor }}22;">
+    <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;font-weight:600;margin-bottom:6px;">{{ label }}</div>
+    <div style="font-size:1.6rem;font-weight:800;color:{{ cor }};">{{ qtd }}</div>
+  </div>
+  {% endfor %}
+  <div class="card" style="padding:14px 16px;border-color:#3b82f622;">
+    <div style="font-size:0.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;font-weight:600;margin-bottom:6px;">Notifs Enviadas</div>
+    <div style="font-size:1.6rem;font-weight:800;color:#60a5fa;">{{ notif_enviadas }}</div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="grid-2" style="margin-bottom:16px;">
+  <div class="card">
+    <div class="card-title">📊 Status de Risco</div>
+    <canvas id="chartStatus" height="180"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">👤 Perfis CRM</div>
+    <canvas id="chartPerfis" height="180"></canvas>
+  </div>
+</div>
+
+<!-- Top 20 Clientes -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-title">🏆 Top 20 Clientes por Gasto Mensal</div>
+  <div class="dg-wrap">
+    <table class="dg" id="dgTop20">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>Cliente</th>
+          <th>Categoria Favorita</th>
+          <th>Perfil</th>
+          <th class="sortable" data-col="4">Dias sem Comprar<span class="sort-icon"></span></th>
+          <th class="sortable" data-col="5">Gasto Mensal<span class="sort-icon"></span></th>
+          <th>Status</th>
+          <th style="width:60px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in top20_clientes %}
+        <tr>
+          <td style="font-family:var(--mono);font-size:0.75rem;color:var(--text3);">
+            {% if forloop.counter == 1 %}🥇
+            {% elif forloop.counter == 2 %}🥈
+            {% elif forloop.counter == 3 %}🥉
+            {% else %}{{ forloop.counter }}{% endif %}
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:9px;">
+              <div class="avatar {% if c.status == 'vermelho' %}av-red{% elif c.status == 'amarelo' %}av-yellow{% else %}av-green{% endif %}">
+                {{ c.nome|slice:":1" }}
+              </div>
+              <span style="font-weight:600;font-size:0.83rem;">{{ c.nome }}</span>
+            </div>
+          </td>
+          <td><span class="chip">{{ c.categoria_mais_comprada }}</span></td>
+          <td>
+            {% if c.perfil == 'ex_fiel' %}<span class="badge badge-red">Ex-Fiel</span>
+            {% elif c.perfil == 'vegetariano_incompleto' %}<span class="badge badge-yellow">Cross-Sell</span>
+            {% elif c.perfil == 'habitos_previsiveis' %}<span class="badge badge-green">Bebê</span>
+            {% elif c.perfil == 'ativo' %}<span class="badge badge-blue">Ativo</span>
+            {% else %}<span class="badge badge-purple">Novo</span>{% endif %}
+          </td>
+          <td data-val="{{ c.dias_sem_comprar }}">
+            <span style="font-family:var(--mono);font-weight:700;color:{% if c.dias_sem_comprar >= 20 %}#f87171{% elif c.dias_sem_comprar >= 10 %}#fbbf24{% else %}#4ade80{% endif %};">
+              {{ c.dias_sem_comprar }}d
+            </span>
+          </td>
+          <td data-val="{{ c.total_gasto_mes }}">
+            <span style="font-family:var(--mono);font-weight:700;color:#4ade80;">R$ {{ c.total_gasto_mes }}</span>
+          </td>
+          <td>
+            <div style="display:inline-flex;align-items:center;gap:5px;font-size:0.78rem;">
+              <span class="dot {% if c.status == 'vermelho' %}dot-red{% elif c.status == 'amarelo' %}dot-yellow{% else %}dot-green{% endif %}"></span>
+              {% if c.status == 'vermelho' %}<span style="color:#f87171;">Alto Risco</span>
+              {% elif c.status == 'amarelo' %}<span style="color:#fbbf24;">Atenção</span>
+              {% else %}<span style="color:#4ade80;">Saudável</span>{% endif %}
+            </div>
+          </td>
+          <td>
+            <a href="/clientes/{{ c.pk }}/" class="btn btn-outline btn-xs">Ver</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Categorias Rentáveis (card principal) -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-title">💎 Categorias Mais Rentáveis — Receita Total por Categoria</div>
+  <div style="overflow-x:auto;">
+    <table class="dg" id="dgCat">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>Categoria</th>
+          <th class="sortable" data-col="2">Receita Total<span class="sort-icon"></span></th>
+          <th class="sortable" data-col="3">Ticket Médio<span class="sort-icon"></span></th>
+          <th class="sortable" data-col="4">Clientes<span class="sort-icon"></span></th>
+          <th>Participação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categorias_rentaveis %}
+        <tr>
+          <td style="color:var(--text3);font-size:0.75rem;font-family:var(--mono);">{{ forloop.counter }}</td>
+          <td><strong style="font-size:0.83rem;">{{ cat.categoria_mais_comprada }}</strong></td>
+          <td data-val="{{ cat.gasto_total_cat|floatformat:2 }}" style="font-family:var(--mono);font-weight:700;color:#4ade80;">
+            R$ {{ cat.gasto_total_cat|floatformat:2 }}
+          </td>
+          <td data-val="{{ cat.ticket_medio_cat|floatformat:2 }}" style="font-family:var(--mono);color:var(--accent-light);">
+            R$ {{ cat.ticket_medio_cat|floatformat:2 }}
+          </td>
+          <td data-val="{{ cat.total_clientes }}" style="font-family:var(--mono);">{{ cat.total_clientes }}</td>
+          <td style="min-width:140px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;background:var(--accent);border-radius:3px;width:{{ cat.pct|floatformat:0 }}%;"></div>
+              </div>
+              <span style="font-size:0.72rem;color:var(--text3);font-family:var(--mono);width:32px;text-align:right;">{{ cat.pct|floatformat:1 }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Gráfico de barras categorias -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-title">📈 Receita por Categoria (R$)</div>
+  <canvas id="chartCat" height="160"></canvas>
+</div>
+
+
+
+<!-- Notificações recentes -->
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div class="card-title" style="margin-bottom:0;">🔔 Últimas Notificações</div>
+    <a href="/notificacoes/" class="btn btn-outline btn-sm">Ver todas →</a>
+  </div>
+  {% if notificacoes_recentes %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Cliente</th><th>Tipo</th><th>Mensagem</th><th>Desconto</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for n in notificacoes_recentes %}
+    <tr>
+      <td><strong style="font-size:0.83rem;">{{ n.cliente.nome }}</strong></td>
+      <td><span class="chip">{{ n.get_tipo_display }}</span></td>
+      <td style="max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);font-size:0.8rem;">{{ n.mensagem }}</td>
+      <td><span style="color:#4ade80;font-weight:700;font-family:var(--mono);">-{{ n.desconto }}%</span></td>
+      <td><span class="badge badge-green">✓ Enviada</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;color:var(--text3);padding:36px;font-size:0.85rem;">
+    Nenhuma notificação ainda. Use o Simulador de Gatilhos ⚡
+  </div>
+  {% endif %}
+</div>
+
+<!-- MODAL SIMULADOR -->
+<div class="modal-overlay" id="modalSim">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>⚡ Simulador de Gatilhos</h3>
+      <span class="modal-x" onclick="fecharSim()">×</span>
+    </div>
+    <p style="color:var(--text2);font-size:0.82rem;margin-bottom:18px;">Selecione um perfil e dispare notificações personalizadas para todos os clientes do grupo.</p>
+    <div class="grid-3" style="gap:10px;margin-bottom:18px;">
+      {% for p in perfis_sim %}
+      <div class="pcard" data-perfil="{{ p.key }}" onclick="selPerfil(this)"
+           style="background:{{ p.bg }};border:2px solid {{ p.border }};border-radius:9px;padding:14px;cursor:pointer;transition:all .15s;">
+        <div style="font-size:1.3rem;margin-bottom:5px;">{{ p.icon }}</div>
+        <div style="font-weight:700;font-size:0.85rem;margin-bottom:3px;">{{ p.label }}</div>
+        <div style="font-size:0.75rem;color:var(--text3);">{{ p.qtd }} clientes</div>
+        <div style="font-size:0.72rem;color:{{ p.color }};margin-top:6px;font-weight:600;">{{ p.oferta }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div id="selInfo" style="display:none;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:0.82rem;color:var(--text2);">
+      ✅ Perfil selecionado: <strong id="selNome" style="color:var(--text);"></strong>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-outline" onclick="fecharSim()">Cancelar</button>
+      <button class="btn btn-primary" id="btnDisp" onclick="disparar()" disabled>⚡ Disparar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESULTADO -->
+<div class="modal-overlay" id="modalRes">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="resTitle">✅ Notificações Disparadas!</h3>
+      <span class="modal-x" onclick="document.getElementById('modalRes').classList.remove('open')">×</span>
+    </div>
+    <div id="resSummary" style="background:var(--surface2);border-radius:7px;padding:11px 14px;margin-bottom:14px;font-size:0.85rem;"></div>
+    <div id="resList" style="max-height:340px;overflow-y:auto;"></div>
+    <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-outline" onclick="document.getElementById('modalRes').classList.remove('open')">Fechar</button>
+      <a href="/notificacoes/" class="btn btn-primary">Ver todas →</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const statusD = {{ status_json|safe }};
+const perfisD = {{ perfis_json|safe }};
+const catL    = {{ cat_labels_json|safe }};
+const catG    = {{ cat_gasto_json|safe }};
+
+const chartCfg = {
+  plugins: { legend: { labels: { color:'#64748b', font:{size:11,family:'Inter'} } } }
+};
+
+new Chart(document.getElementById('chartStatus'), {
+  type:'doughnut',
+  data:{ labels:['Alto Risco 🔴','Atenção 🟡','Saudável 🟢'], datasets:[{ data:statusD, backgroundColor:['#ef4444','#f59e0b','#22c55e'], borderWidth:0, hoverOffset:4 }] },
+  options:{ ...chartCfg, cutout:'68%' }
+});
+
+new Chart(document.getElementById('chartPerfis'), {
+  type:'bar',
+  data:{ labels:['Ex-Fiel','Cross-Sell','Bebê','Ativo','Novo'], datasets:[{ data:perfisD, backgroundColor:['#ef4444','#f59e0b','#22c55e','#3b82f6','#6366f1'], borderRadius:5, borderWidth:0 }] },
+  options:{ plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#64748b',font:{family:'Inter'}},grid:{color:'rgba(255,255,255,0.04)'}}, y:{ticks:{color:'#64748b',font:{family:'Inter'}},grid:{color:'rgba(255,255,255,0.04)'}} } }
+});
+
+new Chart(document.getElementById('chartCat'), {
+  type:'bar',
+  data:{ labels:catL, datasets:[{ data:catG, backgroundColor:'#6366f1', borderRadius:4, borderWidth:0, hoverBackgroundColor:'#818cf8' }] },
+  options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#64748b',callback:v=>'R$'+v.toLocaleString('pt-BR'),font:{family:'Inter',size:11}},grid:{color:'rgba(255,255,255,0.04)'}}, y:{ticks:{color:'#64748b',font:{family:'Inter',size:11}},grid:{display:false}} } }
+});
+
+initDataGrid('dgTop20');
+
+// Simulador
+let perfilAtual = null;
+function abrirSimulador(){ document.getElementById('modalSim').classList.add('open'); }
+function fecharSim(){ document.getElementById('modalSim').classList.remove('open'); resetSel(); }
+function resetSel(){
+  perfilAtual=null;
+  document.querySelectorAll('.pcard').forEach(c=>{c.style.opacity='1';c.style.transform='';});
+  document.getElementById('selInfo').style.display='none';
+  document.getElementById('btnDisp').disabled=true;
+}
+function selPerfil(el){
+  document.querySelectorAll('.pcard').forEach(c=>{c.style.opacity='0.45';c.style.transform='';});
+  el.style.opacity='1'; el.style.transform='scale(1.03)';
+  perfilAtual = el.dataset.perfil;
+  document.getElementById('selNome').textContent = el.querySelector('div:nth-child(2)').textContent;
+  document.getElementById('selInfo').style.display='block';
+  document.getElementById('btnDisp').disabled=false;
+}
+async function disparar(){
+  if(!perfilAtual) return;
+  const btn=document.getElementById('btnDisp');
+  btn.textContent='⏳ Disparando...'; btn.disabled=true;
+  try {
+    const r = await fetch('/api/disparar-perfil/',{
+      method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body:JSON.stringify({perfil:perfilAtual})
+    });
+    const d = await r.json();
+    fecharSim();
+    mostrarRes(d);
+  } catch(e){ showToast('Erro','Falha na requisição','error'); }
+  finally { btn.textContent='⚡ Disparar'; btn.disabled=false; }
+}
+function mostrarRes(d){
+  document.getElementById('resTitle').textContent=`✅ ${d.total_disparado} Notificações Disparadas!`;
+  document.getElementById('resSummary').innerHTML=`<strong>${d.total_disparado}</strong> mensagens personalizadas enviadas com sucesso.`;
+  const list=document.getElementById('resList'); list.innerHTML='';
+  d.notificacoes.slice(0,20).forEach(n=>{
+    list.innerHTML+=`<div class="notif-item">
+      <div class="notif-item-head"><strong>${n.cliente}</strong><span class="badge badge-green">✓ Enviado</span></div>
+      <div style="font-size:0.8rem;color:var(--text2);margin-bottom:6px;">${n.mensagem}</div>
+      <div style="font-size:0.77rem;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="chip">🎟 ${n.oferta}</span>
+        <span class="chip" style="color:var(--accent-light);">Nova: ${n.nova_categoria}</span>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text3);margin-top:6px;border-top:1px solid var(--border);padding-top:6px;">💡 ${n.sugestao}</div>
+    </div>`;
+  });
+  if(d.notificacoes.length>20) list.innerHTML+=`<div style="text-align:center;color:var(--text3);padding:10px;font-size:0.82rem;">...e mais ${d.notificacoes.length-20}. <a href="/notificacoes/" style="color:var(--accent-light);">Ver todas →</a></div>`;
+  document.getElementById('modalRes').classList.add('open');
+  showToast('✅ Sucesso!',`${d.total_disparado} notificações disparadas!`,'success');
+}
+async function limparNotificacoes(){
+  if(!confirm('Limpar todas as notificações?')) return;
+  await fetch('/api/limpar-notificacoes/',{method:'POST',headers:{'X-CSRFToken':getCsrf()}});
+  showToast('Limpeza','Notificações removidas.','info');
+  setTimeout(()=>location.reload(),1200);
+}
+// init datagrid col sort (apenas para leitura visual na tabela de categorias)
+document.querySelectorAll('#dgCat th.sortable').forEach(th=>{
+  th.addEventListener('click',()=>{
+    const col=+th.dataset.col, asc=th.classList.contains('sort-asc');
+    document.querySelectorAll('#dgCat th').forEach(h=>h.classList.remove('sort-asc','sort-desc'));
+    th.classList.add(asc?'sort-desc':'sort-asc');
+    const tbody=document.querySelector('#dgCat tbody');
+    Array.from(tbody.querySelectorAll('tr')).sort((a,b)=>{
+      const av=parseFloat(a.cells[col].dataset.val||0), bv=parseFloat(b.cells[col].dataset.val||0);
+      return asc ? bv-av : av-bv;
+    }).forEach(r=>tbody.appendChild(r));
+  });
+});
+</script>
+{% endblock %}

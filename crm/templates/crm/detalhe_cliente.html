@@ -1,0 +1,140 @@
+{% extends "crm/base.html" %}
+{% block title %}— {{ cliente.nome }}{% endblock %}
+{% block nav_list %}active{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div>
+    <a href="/clientes/" style="color:var(--muted);text-decoration:none;font-size:0.85rem;">← Voltar</a>
+    <div class="page-title" style="margin-top:4px;">{{ cliente.nome }}</div>
+    <div class="page-sub">{{ cliente.cpf }}</div>
+  </div>
+  <button class="btn btn-primary" onclick="dispararNotif()">⚡ Disparar Notificação</button>
+</div>
+
+<div class="grid-2-1" style="margin-bottom:20px;">
+  <!-- Dados do cliente -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+      <div class="avatar {% if cliente.status == 'vermelho' %}avatar-red{% elif cliente.status == 'amarelo' %}avatar-yellow{% else %}avatar-green{% endif %}" style="width:60px;height:60px;font-size:1.4rem;">
+        {{ cliente.nome|slice:":1" }}
+      </div>
+      <div>
+        <div style="font-size:1.3rem;font-weight:800;font-family:'Syne',sans-serif;">{{ cliente.nome }}</div>
+        <div style="color:var(--muted);font-size:0.88rem;">{{ cliente.cpf }}</div>
+        <div style="margin-top:6px;">
+          {% if cliente.perfil == 'ex_fiel' %}<span class="badge badge-red">🔴 Ex-Fiel — Risco de Churn</span>
+          {% elif cliente.perfil == 'vegetariano_incompleto' %}<span class="badge badge-yellow">🟡 Vegetariano Incompleto — Cross-Sell</span>
+          {% elif cliente.perfil == 'habitos_previsiveis' %}<span class="badge badge-green">🍼 Hábitos Previsíveis — Bebê</span>
+          {% elif cliente.perfil == 'ativo' %}<span class="badge badge-blue">⭐ Cliente Ativo — VIP</span>
+          {% else %}<span class="badge badge-purple">👋 Cliente Novo</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="grid-2" style="gap:16px;">
+      <div>
+        <div class="stat-label">Dias Sem Comprar</div>
+        <div style="font-size:2rem;font-weight:800;font-family:'Syne',sans-serif;color:{% if cliente.dias_sem_comprar >= 20 %}#ff6b7a{% elif cliente.dias_sem_comprar >= 10 %}#ffb829{% else %}#2ed573{% endif %};">
+          {{ cliente.dias_sem_comprar }}d
+        </div>
+      </div>
+      <div>
+        <div class="stat-label">Gasto Mensal</div>
+        <div style="font-size:2rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);">
+          R$ {{ cliente.total_gasto_mes }}
+        </div>
+      </div>
+    </div>
+    <hr class="divider">
+    <div>
+      <div class="stat-label" style="margin-bottom:8px;">Categoria Favorita</div>
+      <span class="chip" style="font-size:0.88rem;padding:6px 14px;">{{ cliente.categoria_mais_comprada }}</span>
+    </div>
+
+    <!-- Regra de negócio aplicada -->
+    <hr class="divider">
+    <div style="background:var(--surface2);border-radius:8px;padding:14px;border:1px solid var(--border);">
+      <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">🧠 Regra de Negócio Aplicada</div>
+      {% if cliente.perfil == 'ex_fiel' %}
+      <div style="font-size:0.85rem;">SE <code style="color:var(--accent);">total_gasto_mes ≥ R$600</code> E <code style="color:#ff6b7a;">dias_sem_comprar ≥ 20</code> → <strong>Perfil Ex-Fiel</strong></div>
+      {% elif cliente.perfil == 'vegetariano_incompleto' %}
+      <div style="font-size:0.85rem;">SE <code style="color:var(--accent);">categoria = "Vegetariano e Saudavel"</code> → <strong>Cross-Selling ativo</strong></div>
+      {% elif cliente.perfil == 'habitos_previsiveis' %}
+      <div style="font-size:0.85rem;">SE <code style="color:var(--accent);">categoria = "Fraldas e Infantil"</code> → <strong>Reposição a cada 15 dias</strong></div>
+      {% elif cliente.perfil == 'ativo' %}
+      <div style="font-size:0.85rem;">SE <code style="color:var(--accent);">dias_sem_comprar ≤ 7</code> E <code style="color:#2ed573;">gasto ≥ R$400</code> → <strong>Cliente VIP ativo</strong></div>
+      {% else %}
+      <div style="font-size:0.85rem;">Cliente com <code style="color:#b088ff;">padrão irregular</code> → campanha de engajamento</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Preview da notificação -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="card" style="border-color:rgba(0,229,160,0.3);">
+      <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">📱 Preview da Notificação</div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;font-size:0.85rem;line-height:1.5;border:1px solid var(--border);">
+        {{ msg_preview }}
+      </div>
+      <hr class="divider">
+      <div style="font-size:0.8rem;color:var(--accent);">🎟 {{ oferta_preview }}</div>
+    </div>
+    <div class="card" style="border-color:rgba(0,153,255,0.3);">
+      <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">🆕 Nova Categoria Sugerida</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#33aaff;margin-bottom:6px;">{{ nova_categoria }}</div>
+      <div style="font-size:0.83rem;color:var(--muted);">{{ sugestao }}</div>
+    </div>
+    <div class="card card-sm" style="text-align:center;">
+      <div style="font-size:2rem;font-weight:800;font-family:'Syne',sans-serif;color:var(--accent);">-{{ desconto }}%</div>
+      <div style="font-size:0.82rem;color:var(--muted);">Desconto desta campanha</div>
+    </div>
+  </div>
+</div>
+
+<!-- Histórico de notificações -->
+<div class="card">
+  <div style="font-size:1rem;font-weight:700;margin-bottom:16px;">📋 Histórico de Notificações ({{ notificacoes.count }})</div>
+  {% if notificacoes %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Data</th><th>Tipo</th><th>Mensagem</th><th>Oferta</th><th>Cat. Alvo</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for n in notificacoes %}
+    <tr>
+      <td style="font-size:0.8rem;color:var(--muted);white-space:nowrap;">{{ n.criada_em|date:"d/m/Y H:i" }}</td>
+      <td><span class="chip">{{ n.get_tipo_display }}</span></td>
+      <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.83rem;color:var(--muted);">{{ n.mensagem }}</td>
+      <td style="font-size:0.8rem;color:var(--accent);">{{ n.oferta }}</td>
+      <td><span class="chip">{{ n.categoria_alvo }}</span></td>
+      <td>
+        {% if n.status == 'enviada' %}<span class="badge badge-green">✓ Enviada</span>
+        {% elif n.status == 'lida' %}<span class="badge badge-blue">👁 Lida</span>
+        {% else %}<span class="badge badge-yellow">⏳ Pendente</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;color:var(--muted);padding:32px;">Nenhuma notificação enviada para este cliente ainda.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function dispararNotif() {
+  const r = await fetch('/api/disparar-cliente/{{ cliente.pk }}/', {
+    method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()}
+  });
+  const d = await r.json();
+  if (d.sucesso) {
+    showToast('✅ Notificação enviada!', d.notificacao.mensagem.substring(0,120)+'...','success');
+    setTimeout(() => showToast('💡 Nova Categoria', d.notificacao.sugestao,'info'), 900);
+    setTimeout(() => location.reload(), 2500);
+  }
+}
+</script>
+{% endblock %}

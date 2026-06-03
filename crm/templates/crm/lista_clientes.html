@@ -1,0 +1,134 @@
+{% extends "crm/base.html" %}
+{% block title %}— Clientes{% endblock %}
+{% block nav_list %}active{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="page-title">Clientes</div>
+    <div class="page-sub">{{ total }} cliente(s) encontrado(s)</div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+  <input name="q" class="input-field" placeholder="🔍 Buscar por nome..." value="{{ busca }}" style="flex:1;min-width:160px;">
+
+  <select name="categoria" class="input-field">
+    <option value="">Todas as categorias</option>
+    {% for cat in todas_categorias %}
+    <option value="{{ cat }}" {% if categoria_selecionada == cat %}selected{% endif %}>{{ cat }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="perfil" class="input-field">
+    <option value="">Todos os perfis</option>
+    <option value="ex_fiel"                {% if perfil_selecionado == 'ex_fiel' %}selected{% endif %}>🔴 Ex-Fiel</option>
+    <option value="vegetariano_incompleto" {% if perfil_selecionado == 'vegetariano_incompleto' %}selected{% endif %}>🟡 Cross-Sell</option>
+    <option value="habitos_previsiveis"    {% if perfil_selecionado == 'habitos_previsiveis' %}selected{% endif %}>🍼 Perfil Bebê</option>
+    <option value="ativo"                  {% if perfil_selecionado == 'ativo' %}selected{% endif %}>⭐ Ativo</option>
+    <option value="novo"                   {% if perfil_selecionado == 'novo' %}selected{% endif %}>👋 Novo</option>
+  </select>
+
+  <select name="status" class="input-field">
+    <option value="">Todos os status</option>
+    <option value="vermelho" {% if status_selecionado == 'vermelho' %}selected{% endif %}>🔴 Alto Risco</option>
+    <option value="amarelo"  {% if status_selecionado == 'amarelo'  %}selected{% endif %}>🟡 Atenção</option>
+    <option value="verde"    {% if status_selecionado == 'verde'    %}selected{% endif %}>🟢 Saudável</option>
+  </select>
+
+  <button type="submit" class="btn btn-primary">Filtrar</button>
+  <a href="/clientes/" class="btn btn-outline">Limpar</a>
+</form>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <div class="dg-wrap">
+    <table class="dg" id="dgClientes">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>Cliente</th>
+          <th>CPF</th>
+          <th>Categoria Favorita</th>
+          <th class="sortable" data-col="4">Dias sem Comprar<span class="sort-icon"></span></th>
+          <th class="sortable" data-col="5">Gasto Mensal<span class="sort-icon"></span></th>
+          <th>Perfil CRM</th>
+          <th>Status</th>
+          <th style="width:90px;">Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in clientes %}
+        <tr>
+          <td style="color:var(--text3);font-size:0.75rem;font-family:var(--mono);">{{ forloop.counter }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:9px;">
+              <div class="avatar {% if c.status == 'vermelho' %}av-red{% elif c.status == 'amarelo' %}av-yellow{% else %}av-green{% endif %}">
+                {{ c.nome|slice:":1" }}
+              </div>
+              <span style="font-weight:600;font-size:0.83rem;">{{ c.nome }}</span>
+            </div>
+          </td>
+          <td style="color:var(--text3);font-size:0.78rem;font-family:var(--mono);">{{ c.cpf }}</td>
+          <td><span class="chip">{{ c.categoria_mais_comprada }}</span></td>
+          <td data-val="{{ c.dias_sem_comprar }}">
+            <span style="font-weight:700;font-family:var(--mono);color:{% if c.dias_sem_comprar >= 20 %}#f87171{% elif c.dias_sem_comprar >= 10 %}#fbbf24{% else %}#4ade80{% endif %};">
+              {{ c.dias_sem_comprar }}d
+            </span>
+          </td>
+          <td data-val="{{ c.total_gasto_mes }}">
+            <span style="font-family:var(--mono);font-weight:700;color:#4ade80;">R$ {{ c.total_gasto_mes }}</span>
+          </td>
+          <td>
+            {% if c.perfil == 'ex_fiel' %}<span class="badge badge-red">Ex-Fiel</span>
+            {% elif c.perfil == 'vegetariano_incompleto' %}<span class="badge badge-yellow">Cross-Sell</span>
+            {% elif c.perfil == 'habitos_previsiveis' %}<span class="badge badge-green">Bebê</span>
+            {% elif c.perfil == 'ativo' %}<span class="badge badge-blue">Ativo</span>
+            {% else %}<span class="badge badge-purple">Novo</span>{% endif %}
+          </td>
+          <td>
+            <div style="display:inline-flex;align-items:center;gap:5px;font-size:0.78rem;">
+              <span class="dot {% if c.status == 'vermelho' %}dot-red{% elif c.status == 'amarelo' %}dot-yellow{% else %}dot-green{% endif %}"></span>
+              {% if c.status == 'vermelho' %}<span style="color:#f87171;">Alto Risco</span>
+              {% elif c.status == 'amarelo' %}<span style="color:#fbbf24;">Atenção</span>
+              {% else %}<span style="color:#4ade80;">Saudável</span>{% endif %}
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;gap:5px;">
+              <a href="/clientes/{{ c.pk }}/" class="btn btn-outline btn-xs">Ver</a>
+              <button class="btn btn-blue btn-xs" onclick="dispUnico({{ c.pk }},'{{ c.nome|truncatechars:14 }}')" title="Disparar notificação">⚡</button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="dg-empty">Nenhum cliente encontrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+initDataGrid('dgClientes');
+
+async function dispUnico(pk, nome) {
+  try {
+    const r = await fetch(`/api/disparar-cliente/${pk}/`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()}
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (d.sucesso) {
+      showToast(`✅ ${nome}`, d.notificacao.mensagem.substring(0,100)+'...','success');
+      setTimeout(()=>showToast('💡 Nova Categoria',d.notificacao.sugestao,'info'),700);
+    }
+  } catch(e) {
+    showToast('Erro',`Falha ao disparar: ${e.message}`,'error');
+  }
+}
+</script>
+{% endblock %}
